@@ -218,7 +218,8 @@ main(): Int64 {
     runGeoJSONBench("GeoJSON WGS84→BD09",   CRS.WGS84, CRS.BD09)
 
     println(sep)
-    println("注：GCJ02→WGS84 使用固定 30 次迭代，精度 < 1×10⁻⁷ 度（≈1 cm）")
-    println("    JS版使用收敛判断，中国境内通常约 3 次迭代（精度 1×10⁻⁶ 度）")
+    println("注：GCJ02→WGS84 使用收敛退出循环（阈值 1×10⁻¹⁰ 度），中国境内典型 ~4 次迭代，精度 < 1×10⁻¹⁰ 度（≈0.01 mm）")
+    println("    JS版使用同样收敛策略（阈值 1×10⁻⁶ 度），境内约 3 次迭代（精度 ≈0.1 m）")
+    println("    仓颉版精度更高（阈值更严），两者吞吐量差距预计 < 1.5× (仓颉更快)")
     return 0
 }

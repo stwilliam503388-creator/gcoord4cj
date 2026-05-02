@@ -119,4 +119,6 @@ console.log(SEP);
 const coordResults = results.slice(0, 8);
 const avgOps = coordResults.reduce((s, r) => s + r.ops, 0) / coordResults.length;
 console.log(`\n综合平均吞吐量（前 8 项坐标数组转换）: ${(avgOps / 1000).toFixed(0)}k ops/s`);
-console.log('\n注: GCJ02→WGS84 使用收敛循环（while |dx|>1e-6），境内约 3 次迭代（精度 1e-6 度）');
+console.log('\n注: JS gcoord GCJ02→WGS84 使用收敛循环（while |dx|>1e-6），境内约 3–4 次迭代');
+console.log('    仓颉版 (O2优化后) 使用相同收敛策略，阈值 1e-10°，典型 4 次迭代，与本 JS 数据直接可比');
+console.log('    Cangjie benchmark: cd bench && cjpm build --release && cjpm run');
