@@ -68,6 +68,16 @@ private func routeConvert(
 ): (Float64, Float64) {
     // Validate geographic coordinates (EPSG:3857 uses metres, skip check)
     if (from != CRS.EPSG3857) {
+        // NaN check must come BEFORE range comparisons.
+        // IEEE 754 mandates NaN != NaN is true (the only value with this property).
+        // Float64.isNaN() existence in Cangjie 0.53.4 is unverified; using (x != x)
+        // which is guaranteed by IEEE 754 and does not depend on any API.
+        if (lng != lng || lat != lat) {
+            throw Exception(
+                "Coordinate contains NaN: lng=" + lng.toString() +
+                ", lat=" + lat.toString()
+            )
+        }
         if (lng < -180.0 || lng > 180.0) {
             throw Exception(
                 "Longitude out of range [-180, 180]: " + lng.toString()

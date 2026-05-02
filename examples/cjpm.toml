@@ -1,0 +1,25 @@
+# cj-gcoord demo application
+# Demonstrates the cj-gcoord coordinate conversion library
+#
+# This is a standalone Cangjie executable that shows practical usage
+# of the gcoord4cj library:
+#   1. Converting GPS (WGS84) track points to AutoNavi/GCJ02
+#   2. Converting GeoJSON POI data to Baidu BD09
+#   3. Converting to Web Mercator (EPSG:3857) for tile maps
+#   4. Error handling for invalid coordinates
+#
+# Build and run:
+#   cjpm build
+#   cjpm run
+#
+# Or compile directly:
+#   cjc --import-path .. src/main.cj -o demo && ./demo
+
+[package]
+name = "cj_gcoord_demo"
+version = "1.0.0"
+cjc-version = "0.53.4"
+description = "Sample application demonstrating the cj-gcoord library"
+
+[dependencies]
+cj_gcoord = { path = ".." }
