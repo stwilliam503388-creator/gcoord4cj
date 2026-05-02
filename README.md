@@ -225,7 +225,7 @@ let gcjFc = transformGeoJSON(fc, CRS.WGS84, CRS.GCJ02)
 
 | 源坐标系 | 目标坐标系 | 调用示例 |
 |---------|---------|---------|
-| WGS84（GPS）| GCJ02（高德/Google中国）| `transform(coord, CRS.WGS84, CRS.GCJ02)` |
+| WGS84（GPS）| GCJ02（高德/谷歌中国）| `transform(coord, CRS.WGS84, CRS.GCJ02)` |
 | GCJ02 | WGS84 | `transform(coord, CRS.GCJ02, CRS.WGS84)` |
 | WGS84 | BD09（百度）| `transform(coord, CRS.WGS84, CRS.BD09)` |
 | BD09 | WGS84 | `transform(coord, CRS.BD09, CRS.WGS84)` |

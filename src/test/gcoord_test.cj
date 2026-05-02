@@ -655,7 +655,7 @@ class GeoJSONTest {
         match (out) {
             case f: Feature =>
                 match (f.geometry) {
-                    // correct: null geometry preserved as null（正确：空几何原样保留）
+                    case None => ()   // correct: null geometry preserved as null（正确：空几何原样保留）
                     case Some(_) => @Assert(false, "Geometry should remain None")
                 }
             case _ => @Assert(false, "Expected Feature")
