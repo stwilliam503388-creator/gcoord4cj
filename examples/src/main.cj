@@ -273,7 +273,7 @@ main(): Int64 {
     // 8d. NaN input (handled by (x != x) IEEE 754 guard added in gcoord.cj)
     caught = false
     try {
-        let nanVal: Float64 = 0.0 / 0.0   // IEEE 754 NaN — no uncertain API
+        let nanVal: Float64 = 0.0 / 0.0   // IEEE 754 NaN — avoids Float64.isNaN() (unverified API)
         let _ = transform([nanVal, 39.0], CRS.WGS84, CRS.GCJ02)
     } catch (_: Exception) {
         caught = true
