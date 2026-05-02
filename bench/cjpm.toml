@@ -1,0 +1,17 @@
+# cj-gcoord 性能基准测试
+# Performance benchmark for cj-gcoord
+#
+# 构建并运行 / Build and run:
+#   cd bench && cjpm build && cjpm run
+#
+# 或直接编译 / Or compile directly:
+#   cjc --package-path .. src/main.cj -o bench && ./bench
+
+[package]
+name = "cj_gcoord_bench"
+version = "1.0.0"
+cjc-version = "0.53.4"
+description = "Performance benchmark for cj-gcoord — coordinate conversion throughput"
+
+[dependencies]
+cj_gcoord = { path = ".." }
