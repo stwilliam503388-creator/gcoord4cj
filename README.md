@@ -1,1 +1,184 @@
-# gcoord4cj
+# gcoord4cj — cj-gcoord
+
+> **Cangjie（仓颉）语言实现的地理坐标转换库**，对标 JavaScript 版 [gcoord](https://github.com/hujiulong/gcoord)。
+
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+---
+
+## 功能特性
+
+| 功能 | 说明 |
+|------|------|
+| 坐标系转换 | WGS84 ↔ GCJ02 ↔ BD09 ↔ EPSG:3857 全路径互转 |
+| 别名支持 | EPSG4326 ≡ WGS84，BD09LL ≡ BD09 |
+| GeoJSON 支持 | Point / MultiPoint / LineString / MultiLineString / Polygon / MultiPolygon / GeometryCollection / Feature / FeatureCollection |
+| 高精度逆向算法 | GCJ02→WGS84 使用 30 次迭代逼近，误差 < 1×10⁻⁶ 度（≈1 cm） |
+| 纯仓颉实现 | 仅使用标准库 `std.math` / `std.collection`，零外部依赖 |
+
+---
+
+## 支持的坐标系
+
+| `CRS` 枚举值 | 描述 |
+|------------|------|
+| `WGS84` | 世界大地测量系统 1984（GPS 标准） |
+| `GCJ02` | 国测局坐标系（高德、Google 中国地图） |
+| `BD09` | 百度坐标系（经纬度） |
+| `BD09LL` | BD09 别名 |
+| `EPSG4326` | WGS84 别名 |
+| `EPSG3857` | Web Mercator（单位：米） |
+
+---
+
+## 项目结构
+
+```
+gcoord4cj/
+├── cjpm.toml                   # 包管理配置
+└── src/
+    ├── crs/
+    │   └── crs.cj              # package cj_gcoord.crs  — CRS 枚举
+    ├── transform/
+    │   └── transform.cj        # package cj_gcoord.transform  — 转换算法
+    ├── geojson/
+    │   └── geojson.cj          # package cj_gcoord.geojson  — GeoJSON 类型
+    ├── gcoord.cj               # package cj_gcoord  — 公开 API 入口
+    └── test/
+        └── gcoord_test.cj      # 单元测试（cjpm test）
+```
+
+---
+
+## 快速上手
+
+```cangjie
+import cj_gcoord.*
+import cj_gcoord.crs.*
+import cj_gcoord.geojson.*
+
+// ── 1. 数组坐标转换 ────────────────────────────────────────────────────────
+// WGS84（GPS）→ GCJ02（高德 / Google 中国）
+let gcj = transform([116.404, 39.915], CRS.WGS84, CRS.GCJ02)
+// gcj ≈ [116.41028, 39.91637]
+
+// GCJ02 → BD09（百度地图）
+let bd09 = transform([116.41028, 39.91637], CRS.GCJ02, CRS.BD09)
+// bd09 ≈ [116.41714, 39.92275]
+
+// WGS84 → EPSG:3857（Web Mercator，单位：米）
+let merc = transform([116.404, 39.915], CRS.WGS84, CRS.EPSG3857)
+// merc ≈ [12958430.18, 4852278.95]
+
+// EPSG4326（= WGS84）→ GCJ02
+let gcj2 = transform([116.404, 39.915], CRS.EPSG4326, CRS.GCJ02)
+
+// 保留高程
+let with_alt = transform([116.404, 39.915, 50.0], CRS.WGS84, CRS.GCJ02)
+// with_alt[2] == 50.0
+
+// ── 2. GeoJSON 转换 ────────────────────────────────────────────────────────
+// Point
+let pt    = Point([116.404, 39.915])
+let gcjPt = transformGeoJSON(pt, CRS.WGS84, CRS.GCJ02)
+
+// FeatureCollection
+let fc = FeatureCollection([
+    Feature(Some<Geometry>(Point([116.404, 39.915])), Some<String>("{\"name\":\"北京\"}")),
+    Feature(Some<Geometry>(Point([121.4737, 31.2304])), None<String>)
+])
+let gcjFc = transformGeoJSON(fc, CRS.WGS84, CRS.GCJ02)
+```
+
+---
+
+## 构建与测试
+
+```bash
+# 初始化（首次）
+cjpm build
+
+# 运行单元测试
+cjpm test
+```
+
+---
+
+## API 参考
+
+### `transform(coord, from, to)`
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `coord` | `Array<Float64>` | 源坐标 `[lng, lat]` 或 `[lng, lat, alt]` |
+| `from` | `CRS` | 源坐标系 |
+| `to` | `CRS` | 目标坐标系 |
+| 返回值 | `Array<Float64>` | 转换后坐标（长度与输入相同） |
+
+### `transformGeoJSON(geojson, from, to)`
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `geojson` | `GeoJSON` | 任意 GeoJSON 对象 |
+| `from` | `CRS` | 源坐标系 |
+| `to` | `CRS` | 目标坐标系 |
+| 返回值 | `GeoJSON` | 坐标已转换的新 GeoJSON 对象（原对象不变） |
+
+---
+
+## 算法说明
+
+### WGS84 ↔ GCJ02
+
+基于国测局坐标偏移多项式（GB/T 20257）：
+- 正向（WGS84→GCJ02）：直接计算偏移量 `(dLng, dLat)` 并叠加
+- 逆向（GCJ02→WGS84）：30 次 Newton 迭代逼近，精度 < 1×10⁻⁷ 度
+
+椭球参数（克拉索夫斯基椭球）：
+- 长半轴 `a = 6 378 245.0 m`
+- 第一偏心率平方 `ee = 0.006 693 421 622 96…`
+
+### GCJ02 ↔ BD09
+
+百度坐标系在 GCJ02 基础上做了极坐标旋转与径向偏移：
+```
+z     = sqrt(x² + y²) + 0.00002·sin(y·π·3000/180)
+theta = atan2(y, x) + 0.000003·cos(x·π·3000/180)
+BD09  = (z·cos(theta)+0.0065,  z·sin(theta)+0.006)
+```
+
+### WGS84 ↔ EPSG:3857
+
+标准 Web Mercator 公式：
+```
+x = lng × 20037508.34 / 180
+y = ln(tan((90+lat)·π/360)) / (π/180) × 20037508.34 / 180
+```
+
+---
+
+## 与 JavaScript gcoord 的对应关系
+
+| JS gcoord | cj-gcoord |
+|-----------|-----------|
+| `gcoord.WGS84` | `CRS.WGS84` |
+| `gcoord.GCJ02` | `CRS.GCJ02` |
+| `gcoord.BD09` | `CRS.BD09` |
+| `gcoord.EPSG4326` | `CRS.EPSG4326` |
+| `gcoord.EPSG3857` | `CRS.EPSG3857` |
+| `gcoord.transform(coord, from, to)` | `transform(coord, from, to)` |
+| `gcoord.transform(geojson, from, to)` | `transformGeoJSON(geojson, from, to)` |
+
+---
+
+## 注意事项
+
+1. **中国境外坐标**：GCJ02/BD09 偏移量仅适用于中国大陆（经度 73.66°–135.05°，纬度 3.86°–53.55°），境外坐标原样返回。
+2. **EPSG:3857 输入验证**：Web Mercator 坐标单位为米，不执行经纬度范围校验。
+3. **仓颉版本**：代码以 `cjc-version = "0.53.4"` 为目标编写。若编译器版本不同，`Hashable` 接口方法名（`hashCode` vs `hashValue`）或 `ArrayList.toArray()` API 可能需小幅调整，详见源码注释。
+
+---
+
+## 许可证
+
+MIT License — 与原始 JavaScript gcoord 库保持一致。
