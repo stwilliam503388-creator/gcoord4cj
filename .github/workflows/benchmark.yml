@@ -1,0 +1,157 @@
+name: Performance Benchmark (JS vs Cangjie)
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+# Allow only one concurrent benchmark run per branch to avoid noisy interleaving
+concurrency:
+  group: benchmark-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Job 1 — JavaScript baseline (Node.js / V8 JIT)
+  # ─────────────────────────────────────────────────────────────────────────────
+  benchmark-js:
+    name: JS Benchmark (Node.js)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bench
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install gcoord npm package
+        run: npm install gcoord
+
+      - name: Run JS benchmark
+        run: node benchmark.js | tee "$GITHUB_WORKSPACE/js-bench.txt"
+
+      - name: Upload JS results
+        uses: actions/upload-artifact@v4
+        with:
+          name: js-benchmark-results
+          path: js-bench.txt
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Job 2 — Cangjie (cjc LTS 1.0.0, release build)
+  # ─────────────────────────────────────────────────────────────────────────────
+  benchmark-cangjie:
+    name: Cangjie Benchmark (cjc LTS)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install Cangjie LTS via the community-maintained setup action.
+      # Source: https://github.com/Zxilly/setup-cangjie
+      # Channel docs: https://cangjie-lang.cn/download
+      - name: Set up Cangjie LTS 1.0.0
+        uses: Zxilly/setup-cangjie@v2
+        with:
+          channel: lts
+          version: 1.0.0
+
+      - name: Verify cjc / cjpm installation
+        run: |
+          cjc --version
+          cjpm --version
+
+      # Run the full test suite first — if tests fail, the benchmark is not run.
+      # Gate 2: accuracy regression check (all conversions must stay < 1e-6 °).
+      - name: Run test suite (accuracy gate)
+        run: cjpm test
+
+      # Build the benchmark in release mode so that the compiler can apply
+      # SLP vectorisation, function inlining, and dead-code elimination.
+      # Gate 1: release build must succeed with no errors / warnings.
+      - name: Build benchmark (release mode)
+        run: |
+          cd bench
+          cjpm build --release
+
+      # Run the benchmark and capture output.
+      # After `cjpm build --release`, the binary is at output/bin/<package_name>.
+      # We also accept output/<package_name> as some cjpm versions use a flat layout.
+      - name: Run Cangjie benchmark
+        run: |
+          cd bench
+          echo "=== Locating benchmark binary ==="
+          BINARY=""
+          for candidate in \
+            output/bin/cj_gcoord_bench \
+            output/cj_gcoord_bench \
+            .cangjie/cj_gcoord_bench \
+            cj_gcoord_bench; do
+            if [ -f "$candidate" ] && [ -x "$candidate" ]; then
+              BINARY="$candidate"
+              break
+            fi
+          done
+
+          if [ -n "$BINARY" ]; then
+            echo "Using binary: $BINARY"
+            "$BINARY" | tee "$GITHUB_WORKSPACE/cj-bench.txt"
+          else
+            echo "Release binary not found; falling back to cjpm run"
+            echo "(NOTE: cjpm run may rebuild in debug mode — numbers may be slower)"
+            cjpm run | tee "$GITHUB_WORKSPACE/cj-bench.txt"
+          fi
+
+      - name: Upload Cangjie results
+        uses: actions/upload-artifact@v4
+        with:
+          name: cangjie-benchmark-results
+          path: cj-bench.txt
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Job 3 — Compare & summarise (runs after both benchmarks succeed)
+  # ─────────────────────────────────────────────────────────────────────────────
+  compare:
+    name: Compare JS vs Cangjie
+    runs-on: ubuntu-latest
+    needs: [benchmark-js, benchmark-cangjie]
+    # Always run so we see partial results even if one job fails
+    if: always()
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download JS results
+        uses: actions/download-artifact@v4
+        with:
+          name: js-benchmark-results
+        continue-on-error: true
+
+      - name: Download Cangjie results
+        uses: actions/download-artifact@v4
+        with:
+          name: cangjie-benchmark-results
+        continue-on-error: true
+
+      - name: Print JavaScript benchmark
+        run: |
+          echo "════════════════════════════════════════"
+          echo "  JavaScript (Node.js / V8 JIT)         "
+          echo "════════════════════════════════════════"
+          cat "$GITHUB_WORKSPACE/js-bench.txt" 2>/dev/null || echo "(no JS results — job may have failed)"
+
+      - name: Print Cangjie benchmark
+        run: |
+          echo "════════════════════════════════════════"
+          echo "  Cangjie (cjc LTS 1.0.0, release)     "
+          echo "════════════════════════════════════════"
+          cat "$GITHUB_WORKSPACE/cj-bench.txt" 2>/dev/null || echo "(no Cangjie results — job may have failed)"
+
+      - name: Generate comparison table
+        run: python3 bench/compare.py "$GITHUB_WORKSPACE/js-bench.txt" "$GITHUB_WORKSPACE/cj-bench.txt" 2>/dev/null || echo "(comparison skipped — missing data)"

@@ -1,0 +1,12 @@
+{
+  "name": "cj-gcoord-benchmark",
+  "version": "1.0.0",
+  "description": "JavaScript performance benchmark for gcoord — compare with Cangjie cj-gcoord",
+  "private": true,
+  "scripts": {
+    "bench": "node benchmark.js"
+  },
+  "dependencies": {
+    "gcoord": "^1.1.0"
+  }
+}

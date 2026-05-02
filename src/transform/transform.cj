@@ -135,9 +135,9 @@ public func gcj02ToWgs84(lng: Float64, lat: Float64): (Float64, Float64) {
     var wgsLng: Float64 = lng
     var wgsLat: Float64 = lat
     // [O2] Convergence loop: exits as soon as successive corrections are
-    // indistinguishable at 1e-10 ° precision (bit-identical to 30 fixed
-    // iterations; typically converges in ~4 iterations for China coordinates,
-    // ~7× fewer than the original fixed loop).
+    // indistinguishable at 1e-10 ° precision (numerically equivalent to 30
+    // fixed iterations within 1e-10 °; typically converges in ~4 iterations
+    // for China coordinates, ~7× fewer than the original fixed loop).
     // Safety cap of 30 preserves the original worst-case precision guarantee.
     for (_ in 0..30) {
         let (dLat, dLng) = delta(wgsLng, wgsLat)
