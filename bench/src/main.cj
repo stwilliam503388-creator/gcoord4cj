@@ -189,9 +189,9 @@ func fmtF(f: Float64, dec: Int64): String {
 
 /** Repeat character c n times to form a string. */
 func strRepeat(c: String, n: Int64): String {
-    var result = ""
-    for (_ in 0..n) { result += c }
-    return result
+    let sb = StringBuilder()
+    for (_ in 0..n) { sb.append(c) }
+    return sb.toString()
 }
 
 main(): Int64 {

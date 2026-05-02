@@ -8,7 +8,7 @@
 
 | 项目 | JS 版本 | 仓颉版 |
 |------|---------|--------|
-| 运行时 / 编译器 | Node.js v20.20.2 (V8 JIT) | cjc 0.53.4 (LLVM 原生二进制) |
+| 运行时 / 编译器 | Node.js v20.20.2 (V8 JIT) | cjc 1.0.0 (LLVM 原生二进制) |
 | gcoord 版本 | gcoord npm 最新版 | cj-gcoord 1.0.0 |
 | 基准参数 | N=100,000 点/轮 × 5 轮 | N=100,000 点/轮 × 5 轮 |
 | 测试机 | GitHub Actions runner (Linux x86-64) | 需在目标机器上执行（`cd bench && cjpm build && cjpm run`） |
