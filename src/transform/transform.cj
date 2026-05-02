@@ -228,7 +228,7 @@ public func epsg3857ToWgs84(x: Float64, y: Float64): (Float64, Float64) {
 /**
  * Converts WGS-84 to BD-09 via GCJ-02.
  */
-public func wgs84ToBd09(lng: Float64, lat: Float64): (Float64, Float64) {
+private func wgs84ToBd09(lng: Float64, lat: Float64): (Float64, Float64) {
     let (gcjLng, gcjLat) = wgs84ToGcj02(lng, lat)
     return gcj02ToBd09(gcjLng, gcjLat)
 }
@@ -236,7 +236,7 @@ public func wgs84ToBd09(lng: Float64, lat: Float64): (Float64, Float64) {
 /**
  * Converts BD-09 to WGS-84 via GCJ-02.
  */
-public func bd09ToWgs84(lng: Float64, lat: Float64): (Float64, Float64) {
+private func bd09ToWgs84(lng: Float64, lat: Float64): (Float64, Float64) {
     let (gcjLng, gcjLat) = bd09ToGcj02(lng, lat)
     return gcj02ToWgs84(gcjLng, gcjLat)
 }
@@ -244,7 +244,7 @@ public func bd09ToWgs84(lng: Float64, lat: Float64): (Float64, Float64) {
 /**
  * Converts GCJ-02 to EPSG:3857 via WGS-84.
  */
-public func gcj02ToEpsg3857(lng: Float64, lat: Float64): (Float64, Float64) {
+private func gcj02ToEpsg3857(lng: Float64, lat: Float64): (Float64, Float64) {
     let (wLng, wLat) = gcj02ToWgs84(lng, lat)
     return wgs84ToEpsg3857(wLng, wLat)
 }
@@ -252,7 +252,7 @@ public func gcj02ToEpsg3857(lng: Float64, lat: Float64): (Float64, Float64) {
 /**
  * Converts EPSG:3857 to GCJ-02 via WGS-84.
  */
-public func epsg3857ToGcj02(x: Float64, y: Float64): (Float64, Float64) {
+private func epsg3857ToGcj02(x: Float64, y: Float64): (Float64, Float64) {
     let (wLng, wLat) = epsg3857ToWgs84(x, y)
     return wgs84ToGcj02(wLng, wLat)
 }
@@ -260,7 +260,7 @@ public func epsg3857ToGcj02(x: Float64, y: Float64): (Float64, Float64) {
 /**
  * Converts BD-09 to EPSG:3857 via GCJ-02 → WGS-84.
  */
-public func bd09ToEpsg3857(lng: Float64, lat: Float64): (Float64, Float64) {
+private func bd09ToEpsg3857(lng: Float64, lat: Float64): (Float64, Float64) {
     let (gcjLng, gcjLat) = bd09ToGcj02(lng, lat)
     let (wLng, wLat)     = gcj02ToWgs84(gcjLng, gcjLat)
     return wgs84ToEpsg3857(wLng, wLat)
@@ -269,7 +269,7 @@ public func bd09ToEpsg3857(lng: Float64, lat: Float64): (Float64, Float64) {
 /**
  * Converts EPSG:3857 to BD-09 via WGS-84 → GCJ-02.
  */
-public func epsg3857ToBd09(x: Float64, y: Float64): (Float64, Float64) {
+private func epsg3857ToBd09(x: Float64, y: Float64): (Float64, Float64) {
     let (wLng, wLat)     = epsg3857ToWgs84(x, y)
     let (gcjLng, gcjLat) = wgs84ToGcj02(wLng, wLat)
     return gcj02ToBd09(gcjLng, gcjLat)

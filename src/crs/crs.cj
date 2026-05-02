@@ -25,7 +25,7 @@ package cj_gcoord.crs
  * Note: BD09 and BD09LL are treated as identical by this library.
  *       EPSG4326 and WGS84 are also identical.
  */
-public enum CRS <: Equatable<CRS> & Hashable {
+public enum CRS <: Equatable<CRS> {
     | WGS84
     | GCJ02
     | BD09
@@ -54,19 +54,6 @@ public enum CRS <: Equatable<CRS> & Hashable {
 
     public operator func !=(other: CRS): Bool {
         !(this == other)
-    }
-
-    // ---- Hashable --------------------------------------------------------
-
-    public func hashCode(): Int64 {
-        match (this) {
-            case WGS84    => 0
-            case GCJ02    => 1
-            case BD09     => 2
-            case BD09LL   => 3
-            case EPSG4326 => 4
-            case EPSG3857 => 5
-        }
     }
 
     // ---- ToString --------------------------------------------------------

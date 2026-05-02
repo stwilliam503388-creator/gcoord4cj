@@ -202,7 +202,7 @@ public class FeatureCollection <: GeoJSON {
  *
  * Throws: Exception when `coord` has fewer than 2 elements.
  */
-public func transformPosition(
+private func transformPosition(
     coord: Array<Float64>,
     fn: (Float64, Float64) -> (Float64, Float64)
 ): Array<Float64> {
@@ -225,7 +225,7 @@ public func transformPosition(
  * Applies `fn` to every position in a 1-D array of positions.
  * Used by MultiPoint and LineString.
  */
-public func transformPositionArray(
+private func transformPositionArray(
     coords: Array<Array<Float64>>,
     fn: (Float64, Float64) -> (Float64, Float64)
 ): Array<Array<Float64>> {
@@ -240,7 +240,7 @@ public func transformPositionArray(
  * Applies `fn` to every position in a 2-D array of position arrays.
  * Used by Polygon (rings) and MultiLineString.
  */
-public func transformPositionArray2D(
+private func transformPositionArray2D(
     coords: Array<Array<Array<Float64>>>,
     fn: (Float64, Float64) -> (Float64, Float64)
 ): Array<Array<Array<Float64>>> {
@@ -255,7 +255,7 @@ public func transformPositionArray2D(
  * Applies `fn` to every position in a 3-D array of position arrays.
  * Used by MultiPolygon.
  */
-public func transformPositionArray3D(
+private func transformPositionArray3D(
     coords: Array<Array<Array<Array<Float64>>>>,
     fn: (Float64, Float64) -> (Float64, Float64)
 ): Array<Array<Array<Array<Float64>>>> {
@@ -277,7 +277,7 @@ public func transformPositionArray3D(
  *
  * Throws: Exception for unknown geometry subtypes.
  */
-public func transformGeometry(
+private func transformGeometry(
     geometry: Geometry,
     fn: (Float64, Float64) -> (Float64, Float64)
 ): Geometry {

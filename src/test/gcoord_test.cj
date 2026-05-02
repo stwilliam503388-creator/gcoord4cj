@@ -199,23 +199,7 @@ class TransformAlgorithmTest {
 
     // ---- WGS84 → BD09 / BD09 → WGS84 -------------------------------------
 
-    @TestCase
-    func testWgs84ToBd09_RoundTrip(): Unit {
-        let lng0: Float64 = 116.404
-        let lat0: Float64 = 39.915
-        let (bLng, bLat)   = wgs84ToBd09(lng0, lat0)
-        let (wLng1, wLat1) = bd09ToWgs84(bLng, bLat)
-        assertClose("WGS84↔BD09 round-trip lng", wLng1, lng0, GEO_TOL)
-        assertClose("WGS84↔BD09 round-trip lat", wLat1, lat0, GEO_TOL)
-    }
-
-    @TestCase
-    func testWgs84ToBd09_Guangzhou(): Unit {
-        let (bLng, bLat) = wgs84ToBd09(113.2644, 23.1291)
-        let (wLng, wLat) = bd09ToWgs84(bLng, bLat)
-        assertClose("Guangzhou WGS84↔BD09 lng", wLng, 113.2644, GEO_TOL)
-        assertClose("Guangzhou WGS84↔BD09 lat", wLat,  23.1291, GEO_TOL)
-    }
+    // (round-trip coverage for WGS84 ↔ BD09 is in PublicAPITest.testRoundTrip_Wgs84_Bd09)
 
     // ---- WGS84 ↔ EPSG:3857 ------------------------------------------------
 
@@ -716,7 +700,9 @@ class ErrorHandlingTest {
     func testTransformPosition_TooFewElements(): Unit {
         var thrown = false
         try {
-            let _ = transformPosition([116.404], { x, y => (x, y) })
+            // A Point with fewer than 2 coordinates must trigger an error
+            // when its geometry is traversed by the public transformGeoJSON API.
+            let _ = transformGeoJSON(Point([116.404]), CRS.WGS84, CRS.GCJ02)
         } catch (e: Exception) {
             thrown = true
         }
