@@ -1,0 +1,13 @@
+# cj-gcoord: Cangjie implementation of gcoord
+# Geographic coordinate conversion library
+#
+# Supports: WGS84, GCJ02, BD09, EPSG:4326, EPSG:3857
+# Compatible with cjpm (Cangjie Package Manager)
+
+[package]
+name = "cj_gcoord"
+version = "1.0.0"
+cjc-version = "0.53.4"
+description = "Cangjie port of gcoord — coordinate conversion between WGS84, GCJ02, BD09, EPSG:3857"
+
+[dependencies]
