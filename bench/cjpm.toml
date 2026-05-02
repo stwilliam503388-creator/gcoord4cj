@@ -10,7 +10,7 @@
 [package]
 name = "cj_gcoord_bench"
 version = "1.0.0"
-cjc-version = "0.53.4"
+cjc-version = "1.0.0"
 description = "Performance benchmark for cj-gcoord — coordinate conversion throughput"
 
 [dependencies]

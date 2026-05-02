@@ -34,14 +34,12 @@
  *     do not match the JS reference for input [116.403988, 39.914266]
  *     (JS gives 12958032.67, 4853491.46).  Tests use the JS-computed value.
  *
- * (c) Float64.NaN / Float64.Infinity syntax: used as written in the problem
- *     statement (Cangjie 0.53.4).  If these identifiers do not compile, replace
- *     with the arithmetic equivalents: 0.0/0.0 (NaN) and 1.0/0.0 (+Infinity).
+ * (c) Float64.nan / Float64.infinity syntax: Cangjie 1.0.0 uses lowercase
+ *     static members (Float64.nan, Float64.infinity) per the standard library.
  *
- * (d) NaN comparison: Cangjie Float64 is claimed IEEE 754 compliant (README).
- *     The NaN fix in gcoord.cj uses (x != x) which is guaranteed true only
- *     for NaN in IEEE 754.  Float64.isNaN() is NOT used because its existence
- *     in Cangjie 0.53.4 is unverified.
+ * (d) NaN comparison: Cangjie Float64 is IEEE 754 compliant.
+ *     The NaN guard in gcoord.cj uses (x != x) which is guaranteed true only
+ *     for NaN in IEEE 754.  Float64.isNaN() is not available in Cangjie.
  *
  * P3 — Only constructs matching observed patterns in gcoord_test.cj are used.
  *
@@ -445,9 +443,7 @@ class RobustnessTest {
     /**
      * NaN longitude must throw (criterion ④).
      *
-     * P2(c) Syntax: Float64.NaN used as suggested by problem statement.
-     *   If this identifier does not compile in Cangjie 0.53.4, replace with
-     *   the helper: `let nanVal: Float64 = 0.0 / 0.0`.
+     * P2(c) Syntax: Float64.nan is the Cangjie 1.0.0 standard member for NaN.
      *
      * Without the NaN fix in gcoord.cj this test FAILS because IEEE 754
      * mandates NaN < -180.0 == false and NaN > 180.0 == false, so NaN
@@ -457,7 +453,7 @@ class RobustnessTest {
     func testTransform_nanLng(): Unit {
         var thrown = false
         try {
-            let _ = transform([Float64.NaN, 39.0], CRS.WGS84, CRS.GCJ02)
+            let _ = transform([Float64.nan, 39.0], CRS.WGS84, CRS.GCJ02)
         } catch (e: Exception) {
             thrown = true
         }
@@ -471,7 +467,7 @@ class RobustnessTest {
     func testTransform_nanLat(): Unit {
         var thrown = false
         try {
-            let _ = transform([116.0, Float64.NaN], CRS.WGS84, CRS.GCJ02)
+            let _ = transform([116.0, Float64.nan], CRS.WGS84, CRS.GCJ02)
         } catch (e: Exception) {
             thrown = true
         }
@@ -480,17 +476,14 @@ class RobustnessTest {
 
     /**
      * +Infinity longitude must throw.
-     * This test should PASS without any fix because Infinity > 180.0 == true
+     * This test should PASS because Float64.infinity > 180.0 == true
      * is caught by the existing bounds check.
-     *
-     * P2(c): Float64.Infinity used as per problem statement; replace with
-     *   `let infVal: Float64 = 1.0 / 0.0` if it does not compile.
      */
     @TestCase
     func testTransform_infinityLng(): Unit {
         var thrown = false
         try {
-            let _ = transform([Float64.Infinity, 39.0], CRS.WGS84, CRS.GCJ02)
+            let _ = transform([Float64.infinity, 39.0], CRS.WGS84, CRS.GCJ02)
         } catch (e: Exception) {
             thrown = true
         }
@@ -607,7 +600,7 @@ class SafetyTest {
     func testFeatureCollection_largeSize_noMemoryError(): Unit {
         var buf = ArrayList<Feature>()
         for (_ in 0..10000) {
-            buf.append(Feature(
+            buf.add(Feature(
                 Some<Geometry>(Point([116.5, 39.5])),
                 None<String>
             ))

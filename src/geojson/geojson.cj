@@ -298,7 +298,7 @@ private func transformGeometry(
         case gc: GeometryCollection =>
             var newGeoms = ArrayList<Geometry>()
             for (g in gc.geometries) {
-                newGeoms.append(transformGeometry(g, fn))
+                newGeoms.add(transformGeometry(g, fn))
             }
             GeometryCollection(newGeoms.toArray())
 
@@ -335,7 +335,7 @@ public func transformGeoJSONWithFn(
             for (feature in fc.features) {
                 let transformed = transformGeoJSONWithFn(feature, fn)
                 match (transformed) {
-                    case f: Feature => newFeatures.append(f)
+                    case f: Feature => newFeatures.add(f)
                     case _ =>
                         throw Exception("Expected Feature after transformation")
                 }

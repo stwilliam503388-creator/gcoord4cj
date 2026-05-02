@@ -187,9 +187,16 @@ func fmtF(f: Float64, dec: Int64): String {
 // Main
 // ---------------------------------------------------------------------------
 
+/** Repeat character c n times to form a string. */
+func strRepeat(c: String, n: Int64): String {
+    var result = ""
+    for (_ in 0..n) { result += c }
+    return result
+}
+
 main(): Int64 {
-    let sep = "=".repeat(92)
-    let dash = "-".repeat(92)
+    let sep = strRepeat("=", 92)
+    let dash = strRepeat("-", 92)
 
     println(sep)
     println("cj-gcoord 仓颉版 — 性能基准测试  (N=" + N.toString() + " 点/轮 × " + ROUNDS.toString() + " 轮)")
