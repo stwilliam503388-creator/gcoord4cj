@@ -50,6 +50,27 @@ gcoord4cj/
 
 ---
 
+## 安装与集成
+
+### 1. 将本库作为本地依赖引入
+
+在你的仓颉项目的 `cjpm.toml` 中添加依赖：
+
+```toml
+[dependencies]
+cj_gcoord = { path = "../gcoord4cj" }
+```
+
+### 2. 从源码直接使用
+
+将本仓库克隆到本地，然后在项目中通过相对路径引用：
+
+```bash
+git clone https://github.com/stwilliam503388-creator/gcoord4cj.git
+```
+
+---
+
 ## 快速上手
 
 ```cangjie
@@ -115,6 +136,11 @@ cjpm test
 | `to` | `CRS` | 目标坐标系 |
 | 返回值 | `Array<Float64>` | 转换后坐标（长度与输入相同） |
 
+**异常情况：**
+- `coord.size < 2`：坐标数组元素不足，抛出异常
+- 地理坐标系下经度超出 `[-180, 180]` 或纬度超出 `[-90, 90]`：抛出异常
+- 不支持的转换路径：抛出异常
+
 ### `transformGeoJSON(geojson, from, to)`
 
 | 参数 | 类型 | 说明 |
@@ -123,6 +149,94 @@ cjpm test
 | `from` | `CRS` | 源坐标系 |
 | `to` | `CRS` | 目标坐标系 |
 | 返回值 | `GeoJSON` | 坐标已转换的新 GeoJSON 对象（原对象不变） |
+
+**支持的 GeoJSON 类型：**
+Point · MultiPoint · LineString · MultiLineString · Polygon · MultiPolygon · GeometryCollection · Feature · FeatureCollection
+
+---
+
+## GeoJSON 类型用法示例
+
+### Point（点）
+
+```cangjie
+import cj_gcoord.geojson.*
+
+let pt = Point([116.404, 39.915])          // [经度, 纬度]
+let ptWithAlt = Point([116.404, 39.915, 50.0])  // [经度, 纬度, 高程]
+```
+
+### LineString（线串）
+
+```cangjie
+let ls = LineString([
+    [116.404, 39.915],
+    [121.4737, 31.2304]
+])
+```
+
+### Polygon（多边形）
+
+```cangjie
+// coordinates[0] 为外环，后续为内孔
+let ring: Array<Array<Float64>> = [
+    [116.0, 39.5], [116.8, 39.5],
+    [116.8, 40.3], [116.0, 40.3], [116.0, 39.5]  // 首尾相同以闭合
+]
+let pg = Polygon([ring])
+```
+
+### GeometryCollection（几何集合）
+
+```cangjie
+let gc = GeometryCollection([
+    Point([116.404, 39.915]),
+    LineString([[116.404, 39.915], [121.4737, 31.2304]])
+])
+let gcjGc = transformGeoJSON(gc, CRS.WGS84, CRS.GCJ02)
+```
+
+### Feature（要素）
+
+```cangjie
+// geometry 和 properties 均可为 None
+let feat = Feature(
+    Some<Geometry>(Point([116.404, 39.915])),
+    Some<String>("{\"name\":\"北京\",\"type\":\"城市\"}")
+)
+let gcjFeat = transformGeoJSON(feat, CRS.WGS84, CRS.GCJ02)
+// 转换后 properties 原样保留，geometry 坐标被转换
+```
+
+### FeatureCollection（要素集合）
+
+```cangjie
+let fc = FeatureCollection([
+    Feature(Some<Geometry>(Point([116.404, 39.915])),  Some<String>("{\"name\":\"北京\"}")),
+    Feature(Some<Geometry>(Point([121.4737, 31.2304])), None<String>),
+    Feature(None<Geometry>, None<String>)  // 无几何要素
+])
+let gcjFc = transformGeoJSON(fc, CRS.WGS84, CRS.GCJ02)
+```
+
+---
+
+## 坐标系转换速查表
+
+| 源坐标系 | 目标坐标系 | 调用示例 |
+|---------|---------|---------|
+| WGS84（GPS）| GCJ02（高德/谷歌中国）| `transform(coord, CRS.WGS84, CRS.GCJ02)` |
+| GCJ02 | WGS84 | `transform(coord, CRS.GCJ02, CRS.WGS84)` |
+| WGS84 | BD09（百度）| `transform(coord, CRS.WGS84, CRS.BD09)` |
+| BD09 | WGS84 | `transform(coord, CRS.BD09, CRS.WGS84)` |
+| GCJ02 | BD09 | `transform(coord, CRS.GCJ02, CRS.BD09)` |
+| BD09 | GCJ02 | `transform(coord, CRS.BD09, CRS.GCJ02)` |
+| WGS84 | EPSG:3857（Web Mercator）| `transform(coord, CRS.WGS84, CRS.EPSG3857)` |
+| EPSG:3857 | WGS84 | `transform(coord, CRS.EPSG3857, CRS.WGS84)` |
+| GCJ02 | EPSG:3857 | `transform(coord, CRS.GCJ02, CRS.EPSG3857)` |
+| EPSG:3857 | GCJ02 | `transform(coord, CRS.EPSG3857, CRS.GCJ02)` |
+| BD09 | EPSG:3857 | `transform(coord, CRS.BD09, CRS.EPSG3857)` |
+| EPSG:3857 | BD09 | `transform(coord, CRS.EPSG3857, CRS.BD09)` |
 
 ---
 
@@ -176,6 +290,8 @@ y = ln(tan((90+lat)·π/360)) / (π/180) × 20037508.34 / 180
 1. **中国境外坐标**：GCJ02/BD09 偏移量仅适用于中国大陆（经度 73.66°–135.05°，纬度 3.86°–53.55°），境外坐标原样返回。
 2. **EPSG:3857 输入验证**：Web Mercator 坐标单位为米，不执行经纬度范围校验。
 3. **仓颉版本**：代码以 `cjc-version = "0.53.4"` 为目标编写。若编译器版本不同，`Hashable` 接口方法名（`hashCode` vs `hashValue`）或 `ArrayList.toArray()` API 可能需小幅调整，详见源码注释。
+4. **非破坏性 API**：`transformGeoJSON` 始终返回新对象，原始 GeoJSON 对象不会被修改。
+5. **高程保留**：`transform` 和 `transformGeoJSON` 均会原样保留坐标数组中的高程（第三个元素）及更多附加维度。
 
 ---
 

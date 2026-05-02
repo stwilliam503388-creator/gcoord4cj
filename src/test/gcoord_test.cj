@@ -1,15 +1,19 @@
 /**
  * Package: cj_gcoord_test
  *
+ * cj-gcoord 库的单元测试。
  * Unit tests for the cj-gcoord library.
  *
+ * 测试用例的预期值与原始 JavaScript gcoord 库及独立验证公式交叉比对：
  * Test values are cross-checked against the original JavaScript gcoord library
  * (https://github.com/hujiulong/gcoord) and independently verified formulas.
  *
+ * 精度要求：地理坐标系的每次往返或已知值误差 < 1e-6 度（≈ 0.1 m），
+ *           EPSG:3857 的误差 < 1e-3 m。
  * Precision requirement: every round-trip or known-value error < 1e-6 degrees
  * (≈ 0.1 m) for geographic systems, and < 1e-3 m for EPSG:3857.
  *
- * Run with:
+ * 运行方式 / Run with:
  *   cjpm test
  */
 package cj_gcoord_test
@@ -24,24 +28,30 @@ import cj_gcoord.geojson.*
 import cj_gcoord.transform.*
 
 // ---------------------------------------------------------------------------
+// 精度容差常量
 // Tolerance constants
 // ---------------------------------------------------------------------------
 
-/** 1e-6 degrees ≈ 0.11 m — required accuracy for geographic coordinates */
+/** 1e-6 度 ≈ 0.11 m — 地理坐标所需精度。
+ *  1e-6 degrees ≈ 0.11 m — required accuracy for geographic coordinates */
 private let GEO_TOL: Float64 = 1.0e-6
 
-/** Looser tolerance for iterative gcj02→wgs84 when tested against expected
+/** 迭代 gcj02→wgs84 相对期望 GCJ-02 正向值测试时的宽松容差（往返检验）。
+ *  1e-5 ≈ 1 m 仍具参考价值。
+ *  Looser tolerance for iterative gcj02→wgs84 when tested against expected
  *  GCJ-02 forward values (round-trip check).  1e-5 ≈ 1 m is still useful. */
 private let ITER_TOL: Float64 = 1.0e-5
 
-/** Tolerance for EPSG:3857 values (metres) */
+/** EPSG:3857 值的容差（米）/ Tolerance for EPSG:3857 values (metres) */
 private let MERC_TOL: Float64 = 1.0e-3
 
 // ---------------------------------------------------------------------------
+// 断言辅助函数
 // Assertion helpers
 // ---------------------------------------------------------------------------
 
-/** Assert that |a - b| < tol, printing a descriptive message on failure. */
+/** 断言 |a - b| < tol，失败时打印描述性消息。
+ *  Assert that |a - b| < tol, printing a descriptive message on failure. */
 private func assertClose(label: String, a: Float64, b: Float64, tol: Float64): Unit {
     let diff = abs(a - b)
     @Assert(diff < tol,
@@ -51,6 +61,7 @@ private func assertClose(label: String, a: Float64, b: Float64, tol: Float64): U
 }
 
 // ===========================================================================
+// 1. CRS 枚举测试
 // 1. CRS enum tests
 // ===========================================================================
 
@@ -89,6 +100,7 @@ class CRSTest {
 }
 
 // ===========================================================================
+// 2. 底层算法测试（cj_gcoord.transform）
 // 2. Low-level algorithm tests  (cj_gcoord.transform)
 // ===========================================================================
 
@@ -96,8 +108,11 @@ class CRSTest {
 class TransformAlgorithmTest {
 
     // ---- WGS84 → GCJ02 ----------------------------------------------------
+    // WGS84 转 GCJ02（火星坐标）
 
     /**
+     * 北京天安门：gcoord 标准测试向量。
+     * 预期值来自原始 JS 库。
      * Beijing Tiananmen: canonical gcoord test vector.
      * Expected values from the original JS library.
      */
@@ -120,7 +135,8 @@ class TransformAlgorithmTest {
                 "Expected non-zero latitude offset for Shanghai")
     }
 
-    /** Points outside China must be returned unchanged. */
+    /** 中国境外坐标必须原样返回，不做任何偏移。
+     *  Points outside China must be returned unchanged. */
     @TestCase
     func testWgs84ToGcj02_OutsideChina(): Unit {
         // New York
@@ -134,6 +150,7 @@ class TransformAlgorithmTest {
         assertClose("London lat unchanged", lat2,  51.5074, 1.0e-15)
     }
 
+    // ---- GCJ02 → WGS84（迭代逆变换）
     // ---- GCJ02 → WGS84 (iterative inverse) --------------------------------
 
     @TestCase
@@ -165,6 +182,7 @@ class TransformAlgorithmTest {
         assertClose("NY GCJ02→WGS84 lat", lat,  40.7128, 1.0e-15)
     }
 
+    // ---- GCJ02 ↔ BD09（百度坐标）
     // ---- GCJ02 ↔ BD09 -----------------------------------------------------
 
     @TestCase
@@ -197,13 +215,17 @@ class TransformAlgorithmTest {
         assertClose("Shanghai BD09 round-trip lat", gcjLat1, gcjLat0, GEO_TOL)
     }
 
+    // ---- WGS84 → BD09 / BD09 → WGS84（往返覆盖见 PublicAPITest）
     // ---- WGS84 → BD09 / BD09 → WGS84 -------------------------------------
 
     // (round-trip coverage for WGS84 ↔ BD09 is in PublicAPITest.testRoundTrip_Wgs84_Bd09)
 
+    // ---- WGS84 ↔ EPSG:3857（Web Mercator）
     // ---- WGS84 ↔ EPSG:3857 ------------------------------------------------
 
     /**
+     * 已知结果：本初子午线与赤道交点：
+     *   WGS84 (0, 0) → EPSG:3857 (0, 0)
      * Known result for the prime meridian at the equator:
      *   WGS84 (0, 0) → EPSG:3857 (0, 0)
      */
@@ -251,12 +273,14 @@ class TransformAlgorithmTest {
 }
 
 // ===========================================================================
+// 3. 公开 API 测试（cj_gcoord）
 // 3. Public API tests  (cj_gcoord)
 // ===========================================================================
 
 @Test
 class PublicAPITest {
 
+    // ---- 相同坐标系恒等变换
     // ---- Same-CRS identity ------------------------------------------------
 
     @TestCase
@@ -267,7 +291,8 @@ class PublicAPITest {
         assertClose("Same CRS lat", result[1],  39.915, 1.0e-15)
     }
 
-    /** EPSG4326 must be treated as WGS84 (alias). */
+    /** EPSG4326 须被视为 WGS84（别名）。
+     *  EPSG4326 must be treated as WGS84 (alias). */
     @TestCase
     func testEpsg4326AliasWgs84(): Unit {
         let coord: Array<Float64> = [116.404, 39.915]
@@ -278,7 +303,8 @@ class PublicAPITest {
         assertClose("EPSG4326 alias lat", r1[1], r2[1], 1.0e-15)
     }
 
-    /** BD09LL must be treated as BD09 (alias). */
+    /** BD09LL 须被视为 BD09（别名）。
+     *  BD09LL must be treated as BD09 (alias). */
     @TestCase
     func testBd09LLAlias(): Unit {
         // WGS84 → BD09LL should equal WGS84 → BD09
@@ -289,6 +315,7 @@ class PublicAPITest {
         assertClose("BD09LL alias lat", r1[1], r2[1], 1.0e-15)
     }
 
+    // ---- 数组坐标基本转换路径
     // ---- Array coordinate – basic paths -----------------------------------
 
     @TestCase
@@ -369,6 +396,7 @@ class PublicAPITest {
         assertClose("BD09→EPSG3857 y", got[1], exp[1], MERC_TOL)
     }
 
+    // ---- 高程保留测试
     // ---- Altitude preservation --------------------------------------------
 
     @TestCase
@@ -379,6 +407,7 @@ class PublicAPITest {
         assertClose("Altitude preserved", result[2], 50.0, 1.0e-15)
     }
 
+    // ---- 往返测试（六条对称路径全覆盖）
     // ---- Round-trips (all six symmetric paths) ----------------------------
 
     @TestCase
@@ -437,13 +466,14 @@ class PublicAPITest {
 }
 
 // ===========================================================================
+// 4. GeoJSON 集成测试
 // 4. GeoJSON integration tests
 // ===========================================================================
 
 @Test
 class GeoJSONTest {
 
-    // ---- Point ------------------------------------------------------------
+    // ---- Point（点）------------------------------------------------------
 
     @TestCase
     func testPoint_Wgs84ToGcj02(): Unit {
@@ -469,7 +499,7 @@ class GeoJSONTest {
         }
     }
 
-    // ---- MultiPoint -------------------------------------------------------
+    // ---- MultiPoint（多点）-----------------------------------------------
 
     @TestCase
     func testMultiPoint_Wgs84ToGcj02(): Unit {
@@ -488,7 +518,7 @@ class GeoJSONTest {
         }
     }
 
-    // ---- LineString -------------------------------------------------------
+    // ---- LineString（线串）-----------------------------------------------
 
     @TestCase
     func testLineString_Wgs84ToGcj02(): Unit {
@@ -502,7 +532,7 @@ class GeoJSONTest {
         }
     }
 
-    // ---- Polygon ----------------------------------------------------------
+    // ---- Polygon（多边形）------------------------------------------------
 
     @TestCase
     func testPolygon_Wgs84ToGcj02(): Unit {
@@ -524,7 +554,7 @@ class GeoJSONTest {
         }
     }
 
-    // ---- MultiLineString --------------------------------------------------
+    // ---- MultiLineString（多线串）----------------------------------------
 
     @TestCase
     func testMultiLineString_PointCount(): Unit {
@@ -542,7 +572,7 @@ class GeoJSONTest {
         }
     }
 
-    // ---- MultiPolygon -----------------------------------------------------
+    // ---- MultiPolygon（多多边形）-----------------------------------------
 
     @TestCase
     func testMultiPolygon_StructurePreserved(): Unit {
@@ -563,7 +593,7 @@ class GeoJSONTest {
         }
     }
 
-    // ---- GeometryCollection -----------------------------------------------
+    // ---- GeometryCollection（几何集合）-----------------------------------
 
     @TestCase
     func testGeometryCollection(): Unit {
@@ -584,7 +614,7 @@ class GeoJSONTest {
         }
     }
 
-    // ---- Feature ----------------------------------------------------------
+    // ---- Feature（要素）--------------------------------------------------
 
     @TestCase
     func testFeature_WithGeometry(): Unit {
@@ -595,12 +625,14 @@ class GeoJSONTest {
         let out = transformGeoJSON(feat, CRS.WGS84, CRS.GCJ02)
         match (out) {
             case f: Feature =>
+                // properties 属性必须原样保留
                 // Properties must be preserved
                 match (f.properties) {
                     case Some(p) =>
                         @Assert(p == "{\"name\":\"Beijing\"}", "Properties preserved")
                     case None => @Assert(false, "Properties should not be None")
                 }
+                // 几何坐标必须经过变换
                 // Geometry must be transformed
                 match (f.geometry) {
                     case Some(g) =>
@@ -623,14 +655,14 @@ class GeoJSONTest {
         match (out) {
             case f: Feature =>
                 match (f.geometry) {
-                    case None => ()   // correct: null geometry preserved as null
+                    case None => ()   // correct: null geometry preserved as null（正确：空几何原样保留）
                     case Some(_) => @Assert(false, "Geometry should remain None")
                 }
             case _ => @Assert(false, "Expected Feature")
         }
     }
 
-    // ---- FeatureCollection ------------------------------------------------
+    // ---- FeatureCollection（要素集合）------------------------------------
 
     @TestCase
     func testFeatureCollection(): Unit {
@@ -657,6 +689,7 @@ class GeoJSONTest {
 }
 
 // ===========================================================================
+// 5. 错误处理测试
 // 5. Error-handling tests
 // ===========================================================================
 
@@ -702,6 +735,7 @@ class ErrorHandlingTest {
         try {
             // A Point with fewer than 2 coordinates must trigger an error
             // when its geometry is traversed by the public transformGeoJSON API.
+            // 少于 2 个坐标的 Point，在公开 transformGeoJSON API 遍历其几何时必须触发异常。
             let _ = transformGeoJSON(Point([116.404]), CRS.WGS84, CRS.GCJ02)
         } catch (e: Exception) {
             thrown = true
