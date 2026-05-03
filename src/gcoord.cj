@@ -89,7 +89,7 @@ private func routeConvert(
         // 此处使用 (x != x) 而非依赖可能不存在的 Float64.isNaN() API。
         // NaN check must come BEFORE range comparisons.
         // IEEE 754 mandates NaN != NaN is true (the only value with this property).
-        // Float64.isNaN() existence in Cangjie 0.53.4 is unverified; using (x != x)
+        // Float64.isNaN() is not available in Cangjie; using (x != x)
         // which is guaranteed by IEEE 754 and does not depend on any API.
         if (lng != lng || lat != lat) {
             throw Exception(

@@ -268,16 +268,15 @@ private func transformPosition(
  * 用于 MultiPoint 和 LineString。
  * Applies `fn` to every position in a 1-D array of positions.
  * Used by MultiPoint and LineString.
+ *
+ * [O3] Pre-allocated Array(n, lambda) replaces ArrayList+toArray(),
+ * eliminating one heap allocation and one copy per call.
  */
 private func transformPositionArray(
     coords: Array<Array<Float64>>,
     fn: (Float64, Float64) -> (Float64, Float64)
 ): Array<Array<Float64>> {
-    var result = ArrayList<Array<Float64>>()
-    for (coord in coords) {
-        result.append(transformPosition(coord, fn))
-    }
-    return result.toArray()
+    return Array<Array<Float64>>(coords.size, { i => transformPosition(coords[i], fn) })
 }
 
 /**
@@ -285,16 +284,14 @@ private func transformPositionArray(
  * 用于 Polygon（环）和 MultiLineString。
  * Applies `fn` to every position in a 2-D array of position arrays.
  * Used by Polygon (rings) and MultiLineString.
+ *
+ * [O3] Pre-allocated Array(n, lambda) replaces ArrayList+toArray().
  */
 private func transformPositionArray2D(
     coords: Array<Array<Array<Float64>>>,
     fn: (Float64, Float64) -> (Float64, Float64)
 ): Array<Array<Array<Float64>>> {
-    var result = ArrayList<Array<Array<Float64>>>()
-    for (ring in coords) {
-        result.append(transformPositionArray(ring, fn))
-    }
-    return result.toArray()
+    return Array<Array<Array<Float64>>>(coords.size, { i => transformPositionArray(coords[i], fn) })
 }
 
 /**
@@ -302,16 +299,14 @@ private func transformPositionArray2D(
  * 用于 MultiPolygon。
  * Applies `fn` to every position in a 3-D array of position arrays.
  * Used by MultiPolygon.
+ *
+ * [O3] Pre-allocated Array(n, lambda) replaces ArrayList+toArray().
  */
 private func transformPositionArray3D(
     coords: Array<Array<Array<Array<Float64>>>>,
     fn: (Float64, Float64) -> (Float64, Float64)
 ): Array<Array<Array<Array<Float64>>>> {
-    var result = ArrayList<Array<Array<Array<Float64>>>>()
-    for (polygon in coords) {
-        result.append(transformPositionArray2D(polygon, fn))
-    }
-    return result.toArray()
+    return Array<Array<Array<Array<Float64>>>>(coords.size, { i => transformPositionArray2D(coords[i], fn) })
 }
 
 // ===========================================================================
@@ -355,7 +350,7 @@ private func transformGeometry(
             // 递归处理集合中的每个几何对象
             var newGeoms = ArrayList<Geometry>()
             for (g in gc.geometries) {
-                newGeoms.append(transformGeometry(g, fn))
+                newGeoms.add(transformGeometry(g, fn))
             }
             GeometryCollection(newGeoms.toArray())
 
@@ -397,7 +392,7 @@ public func transformGeoJSONWithFn(
             for (feature in fc.features) {
                 let transformed = transformGeoJSONWithFn(feature, fn)
                 match (transformed) {
-                    case f: Feature => newFeatures.append(f)
+                    case f: Feature => newFeatures.add(f)
                     case _ =>
                         throw Exception("Expected Feature after transformation")
                 }

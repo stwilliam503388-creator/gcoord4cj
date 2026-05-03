@@ -160,12 +160,19 @@ public func gcj02ToWgs84(lng: Float64, lat: Float64): (Float64, Float64) {
     }
     var wgsLng: Float64 = lng
     var wgsLat: Float64 = lat
-    // 迭代 30 次，误差 ≪ 1×10⁻⁷ 度（≈ 1 cm）
-    // 30 iterations — error ≪ 1 × 10⁻⁷ degrees (≈ 1 cm)
+    // [O2] 收敛退出循环：连续修正量小于 1×10⁻¹⁰ 度时提前退出，通常约 4 次即可收敛。
+    // [O2] Convergence loop: exits early when successive corrections are < 1e-10 °;
+    // typically ~4 iterations for China coordinates. Safety cap of 30 preserves
+    // worst-case precision guarantee (error ≪ 1×10⁻⁷ degrees, ≈ 1 cm).
     for (_ in 0..30) {
         let (dLat, dLng) = delta(wgsLng, wgsLat)
-        wgsLng = lng - dLng
-        wgsLat = lat - dLat
+        let nextLng = lng - dLng
+        let nextLat = lat - dLat
+        if (abs(nextLng - wgsLng) < 1.0e-10 && abs(nextLat - wgsLat) < 1.0e-10) {
+            return (nextLng, nextLat)
+        }
+        wgsLng = nextLng
+        wgsLat = nextLat
     }
     return (wgsLng, wgsLat)
 }

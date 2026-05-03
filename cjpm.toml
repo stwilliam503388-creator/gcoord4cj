@@ -7,7 +7,7 @@
 [package]
 name = "cj_gcoord"
 version = "1.0.0"
-cjc-version = "0.53.4"
+cjc-version = "1.0.0"
 description = "Cangjie port of gcoord — coordinate conversion between WGS84, GCJ02, BD09, EPSG:3857"
 
 [dependencies]
