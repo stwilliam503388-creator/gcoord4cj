@@ -66,6 +66,17 @@ jobs:
           echo "URL: ${CJ_URL}"
           wget --no-verbose --show-progress -O /tmp/cangjie.tar.gz "${CJ_URL}"
 
+          # Validate the download: the SDK is ~1 GB; a response smaller than
+          # 10 MB indicates an authentication page was returned instead of the
+          # real archive (cangjie-lang.cn routes downloads through CSDN, which
+          # requires a login for large files).
+          DL_BYTES=$(stat -c '%s' /tmp/cangjie.tar.gz)
+          echo "Downloaded ${DL_BYTES} bytes"
+          if [ "${DL_BYTES}" -lt 10485760 ]; then
+            echo "::error::Cangjie SDK download failed: received ${DL_BYTES} bytes (expected ~1 GB). The cangjie-lang.cn server may require CSDN authentication. Check https://cangjie-lang.cn/download/${CJ_VER} for an updated download URL."
+            exit 1
+          fi
+
           echo "=== Extracting SDK to ${CJ_SDK} ==="
           mkdir -p "${CJ_SDK}"
           tar -xzf /tmp/cangjie.tar.gz -C "${CJ_SDK}"
