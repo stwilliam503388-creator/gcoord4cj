@@ -76,12 +76,17 @@ jobs:
           ls "${CJ_HOME}/"
 
           # Follow the official guide: source envsetup.sh
-          # (sets CANGJIE_HOME, PATH, and LD_LIBRARY_PATH in current shell)
+          # envsetup.sh typically sets CANGJIE_HOME, adds bin/ to PATH,
+          # and updates LD_LIBRARY_PATH. We source it here so the current
+          # step can use those variables; subsequent steps need GITHUB_ENV/PATH.
           source "${CJ_HOME}/envsetup.sh"
 
-          # Persist PATH and env vars for all subsequent workflow steps
+          # Persist PATH and env vars for all subsequent workflow steps.
+          # We manually export the three variables envsetup.sh is known to touch:
           echo "${CJ_HOME}/bin" >> "${GITHUB_PATH}"
-          echo "CANGJIE_HOME=${CJ_HOME}"    >> "${GITHUB_ENV}"
+          echo "CANGJIE_HOME=${CJ_HOME}" >> "${GITHUB_ENV}"
+          # Use :+ so we only prepend the separator when LD_LIBRARY_PATH is
+          # non-empty — avoids a trailing ':' which would add '.' to the search path.
           echo "LD_LIBRARY_PATH=${CJ_HOME}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" >> "${GITHUB_ENV}"
 
       - name: Verify cjc / cjpm installation
