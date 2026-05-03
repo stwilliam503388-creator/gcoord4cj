@@ -53,14 +53,36 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Install Cangjie LTS via the community-maintained setup action.
-      # Source: https://github.com/Zxilly/setup-cangjie
-      # Channel docs: https://cangjie-lang.cn/download
-      - name: Set up Cangjie LTS 1.0.0
-        uses: Zxilly/setup-cangjie@v2
-        with:
-          channel: lts
-          version: 1.0.0
+      # Install Cangjie LTS 1.0.0 directly from the official website.
+      # Reference: https://cangjie-lang.cn/download/1.0.0
+      # Official guide: download tar.gz → extract → source envsetup.sh
+      - name: Install Cangjie LTS 1.0.0 (cangjie-lang.cn official)
+        run: |
+          CJ_VER="1.0.0"
+          CJ_URL="https://cangjie-lang.cn/download/${CJ_VER}/cangjie-sdk-linux-x64-${CJ_VER}.tar.gz"
+          CJ_SDK="${HOME}/.cangjie-sdk"
+
+          echo "=== Downloading Cangjie LTS ${CJ_VER} from cangjie-lang.cn ==="
+          echo "URL: ${CJ_URL}"
+          wget --no-verbose --show-progress -O /tmp/cangjie.tar.gz "${CJ_URL}"
+
+          echo "=== Extracting SDK to ${CJ_SDK} ==="
+          mkdir -p "${CJ_SDK}"
+          tar -xzf /tmp/cangjie.tar.gz -C "${CJ_SDK}"
+
+          # The official archive extracts into a 'cangjie/' subdirectory
+          CJ_HOME="${CJ_SDK}/cangjie"
+          echo "SDK contents:"
+          ls "${CJ_HOME}/"
+
+          # Follow the official guide: source envsetup.sh
+          # (sets CANGJIE_HOME, PATH, and LD_LIBRARY_PATH in current shell)
+          source "${CJ_HOME}/envsetup.sh"
+
+          # Persist PATH and env vars for all subsequent workflow steps
+          echo "${CJ_HOME}/bin" >> "${GITHUB_PATH}"
+          echo "CANGJIE_HOME=${CJ_HOME}"    >> "${GITHUB_ENV}"
+          echo "LD_LIBRARY_PATH=${CJ_HOME}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" >> "${GITHUB_ENV}"
 
       - name: Verify cjc / cjpm installation
         run: |
@@ -90,6 +112,7 @@ jobs:
           BINARY=""
           for candidate in \
             output/bin/cj_gcoord_bench \
+            output/release/bin/cj_gcoord_bench \
             output/cj_gcoord_bench \
             .cangjie/cj_gcoord_bench \
             cj_gcoord_bench; do
@@ -154,4 +177,33 @@ jobs:
           cat "$GITHUB_WORKSPACE/cj-bench.txt" 2>/dev/null || echo "(no Cangjie results — job may have failed)"
 
       - name: Generate comparison table
-        run: python3 bench/compare.py "$GITHUB_WORKSPACE/js-bench.txt" "$GITHUB_WORKSPACE/cj-bench.txt" 2>/dev/null || echo "(comparison skipped — missing data)"
+        run: |
+          python3 bench/compare.py \
+            "$GITHUB_WORKSPACE/js-bench.txt" \
+            "$GITHUB_WORKSPACE/cj-bench.txt" \
+            2>/dev/null || echo "(comparison skipped — missing data)"
+
+      - name: Write Step Summary
+        if: always()
+        run: |
+          {
+            echo "## Performance Comparison: JavaScript vs Cangjie LTS 1.0.0"
+            echo ""
+            echo "### JavaScript (Node.js / V8 JIT)"
+            echo '```'
+            cat "$GITHUB_WORKSPACE/js-bench.txt" 2>/dev/null || echo "(no JS results)"
+            echo '```'
+            echo ""
+            echo "### Cangjie (cjc LTS 1.0.0, --release)"
+            echo '```'
+            cat "$GITHUB_WORKSPACE/cj-bench.txt" 2>/dev/null || echo "(no Cangjie results)"
+            echo '```'
+            echo ""
+            echo "### Side-by-Side Comparison"
+            echo '```'
+            python3 bench/compare.py \
+              "$GITHUB_WORKSPACE/js-bench.txt" \
+              "$GITHUB_WORKSPACE/cj-bench.txt" \
+              2>/dev/null || echo "(comparison skipped — one or both result files missing)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
