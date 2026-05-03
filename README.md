@@ -36,6 +36,7 @@
 ```
 gcoord4cj/
 ├── cjpm.toml                   # 包管理配置
+├── BENCHMARK.md                # 性能基准测试报告（JS 实测 + 仓颉估算）
 └── src/
     ├── crs/
     │   └── crs.cj              # package cj_gcoord.crs  — CRS 枚举
@@ -45,7 +46,9 @@ gcoord4cj/
     │   └── geojson.cj          # package cj_gcoord.geojson  — GeoJSON 类型
     ├── gcoord.cj               # package cj_gcoord  — 公开 API 入口
     └── test/
-        └── gcoord_test.cj      # 单元测试（cjpm test）
+        ├── gcoord_test.cj      # CRS 枚举 / 算法 / 公开 API / GeoJSON / 错误处理
+        ├── transform_test.cj   # JS ground-truth 精确值对比 / 健壮性 / 安全性
+        └── extra_test.cj       # 多城市往返 / 全路径 / 境内外边界 / 别名 / 3D 坐标
 ```
 
 ---
@@ -122,6 +125,25 @@ cjpm build
 # 运行单元测试
 cjpm test
 ```
+
+### 测试覆盖说明
+
+| 测试文件 | 测试类 | 覆盖内容 |
+|---------|-------|---------|
+| `gcoord_test.cj` | `CRSTest` | CRS 枚举等值 / 不等值 / toString |
+| | `TransformAlgorithmTest` | 低层算法函数（wgs84ToGcj02 等）数值精度 |
+| | `RoundTripTest` | 六条对称路径往返误差 < 1e-6° |
+| | `GeoJSONTest` | Point / MultiPoint / LineString / Polygon / MultiLineString / MultiPolygon / GeometryCollection / Feature / FeatureCollection |
+| | `ErrorHandlingTest` | 坐标不足 / 经纬度越界异常 |
+| `transform_test.cj` | `GroundTruthTest` | 与 JS gcoord 1.0.7 参考值精确对比（误差 < 1e-6°） |
+| | `GeoJSONStructureTest` | GeoJSON 转换后 type 不变 / 坐标层次不变 |
+| | `RobustnessTest` | 空数组 / 单元素 / NaN / Infinity / 极坐标不崩溃 |
+| | `SafetyTest` | 迭代上界 30 次 / 5 层嵌套 / 10,000 Feature 无内存异常 |
+| `extra_test.cj` | `MoreCitiesTest` | 广州 / 成都 / 哈尔滨 / 拉萨 / 乌鲁木齐五城市精确值+往返 |
+| | `AllConvertPathsTest` | 全部 12 条有向转换路径覆盖 |
+| | `ChinaBoundaryTest` | 境内有偏移 / 境外无偏移 / 东京 / 圣保罗 |
+| | `AliasPathsTest` | EPSG4326 ≡ WGS84 / BD09LL ≡ BD09 全方向等值验证 |
+| | `GeoJson3DTest` | Point / MultiPoint / LineString / Polygon / Feature 3D 高程保留 |
 
 ---
 
@@ -240,13 +262,37 @@ let gcjFc = transformGeoJSON(fc, CRS.WGS84, CRS.GCJ02)
 
 ---
 
+## 性能参考
+
+仓颉版编译为 LLVM 原生二进制，单点转换速度预计约 JS (V8) 的 **3–5×**。
+以下为 JS gcoord 1.0.7 在 Node.js v20.20.2 上的实测基准（作为参照基线）：
+
+| 转换路径 | JS 平均耗时 | JS 吞吐量 |
+|---------|-----------|---------|
+| WGS84 → GCJ02 | 138.5 ms/10万次 | 722k ops/s |
+| GCJ02 → WGS84 | 201.4 ms/10万次 | 496k ops/s |
+| WGS84 → BD09 | 160.3 ms/10万次 | 624k ops/s |
+| WGS84 → EPSG:3857 | 110.5 ms/10万次 | 905k ops/s |
+
+仓颉版实测数据需本地安装 `cjc 1.0.0` 后运行：
+
+```bash
+cd bench
+cjpm build --release
+cjpm run
+```
+
+完整性能分析（算法优化说明 / 估算方法 / 数据不确定度）见 [BENCHMARK.md](BENCHMARK.md)。
+
+---
+
 ## 算法说明
 
 ### WGS84 ↔ GCJ02
 
 基于国测局坐标偏移多项式（GB/T 20257）：
 - 正向（WGS84→GCJ02）：直接计算偏移量 `(dLng, dLat)` 并叠加
-- 逆向（GCJ02→WGS84）：30 次 Newton 迭代逼近，精度 < 1×10⁻⁷ 度
+- 逆向（GCJ02→WGS84）：收敛迭代逼近（阈值 1×10⁻¹⁰ 度，仓颉版中国境内约 4 次收敛，JS 版约 3 次，安全上界 30 次），精度 < 1×10⁻⁷ 度（≈1 cm）
 
 椭球参数（克拉索夫斯基椭球）：
 - 长半轴 `a = 6 378 245.0 m`
@@ -289,7 +335,7 @@ y = ln(tan((90+lat)·π/360)) / (π/180) × 20037508.34 / 180
 
 1. **中国境外坐标**：GCJ02/BD09 偏移量仅适用于中国大陆（经度 73.66°–135.05°，纬度 3.86°–53.55°），境外坐标原样返回。
 2. **EPSG:3857 输入验证**：Web Mercator 坐标单位为米，不执行经纬度范围校验。
-3. **仓颉版本**：代码以 `cjc-version = "0.53.4"` 为目标编写。若编译器版本不同，`Hashable` 接口方法名（`hashCode` vs `hashValue`）或 `ArrayList.toArray()` API 可能需小幅调整，详见源码注释。
+3. **仓颉版本**：代码以 `cjc-version = "1.0.0"` 为目标编写。若编译器版本不同，`Hashable` 接口方法名（`hashCode` vs `hashValue`）或 `ArrayList.toArray()` API 可能需小幅调整，详见源码注释。
 4. **非破坏性 API**：`transformGeoJSON` 始终返回新对象，原始 GeoJSON 对象不会被修改。
 5. **高程保留**：`transform` 和 `transformGeoJSON` 均会原样保留坐标数组中的高程（第三个元素）及更多附加维度。
 
